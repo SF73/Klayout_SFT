@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description>Export as png (SmartPrint)</description>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>true</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text>import pya
+import os
+import math
+class ScreenshotDialog(pya.QDialog):
+  """
+  This class implements a dialog with a screenshot display area and a
+  screenshot button
+  """
+  def readCarac(self):
+    path = os.path.abspath(os.path.expanduser("~/Documents/SFTconverter/carac.dat"))
+    if not os.path.exists(path):
+      raise FileNotFoundError("Can't find SFT carac file")
+    with open(path) as f:
+      lines = f.readlines()
+    self.lenses = []
+    for l in lines:
+      ar = l.strip().split("\t")
+      ar = [float(x.replace(",",".")) for x in ar]
+      self.lenses.append({"mag":ar[0], "width":ar[1]*1000, "height":ar[2]*1000, "res":ar[3]})
+  
+  
+  
+  def button_clicked(self, checked):
+    """ Event handler: "Screenshot" button clicked """
+
+    view = pya.Application.instance().main_window().current_view()
+    if view is None:
+      pya.MessageBox.warning("No layout", "No layout", pya.MessageBox.Ok)
+      return
+    
+    #Backup properties
+    grid_visible = view.get_config('grid-visible')
+    backup = {}
+    for l in view.each_layer():
+      backup[l.source] = l.dup()
+      l.fill_color = 0
+      l.frame_color = 0
+      l.dither_pattern = 0
+    
+    try:
+      cv = view.active_cellview()
+      cell = cv.cell
+      currentPath = cv.filename()
+      dbu = cv.layout().dbu
+      lensIdx = self.objCombo.currentIndex
+      lens = self.lenses[lensIdx]
+      w = 1920
+      h = 1080
+      #rect = pya.DBox(-lens["width"]/2, -lens["height"]/2, lens["width"]/2, lens["height"]/2)
+      rect = pya.DBox(0, 0, lens["width"], lens["height"])
+      rect.move(-lens["width"]/2, -lens["height"]/2)
+      if self.centerCheck.checked:
+        p = cell.bbox().center()
+        rect.move(p.x*dbu, p.y*dbu)       
+      #img = view.get_image_with_options(1920,1080,0,0,0,rect,True)
+      if self.warnCheck.checked:
+        if lens["height"] &lt; cell.bbox().height()*dbu or lens["width"] &lt; cell.bbox().width()*dbu:
+          ans = pya.MessageBox.warning("Warning", "The whole drawing doesn't fit in one image\nDo you want to continue", pya.MessageBox.Yes | pya.MessageBox.No)
+          if ans != pya.MessageBox.Yes:
+            print('stopped')
+            return
+        elif rect.bbox().left &gt; cell.bbox().left*dbu or rect.bbox().right &lt; cell.bbox().right*dbu or rect.bbox().top &lt; cell.bbox().top*dbu or rect.bbox().bottom &gt; cell.bbox().bottom*dbu:
+          ans = pya.MessageBox.warning("Warning", "Part of the drawing is outside of the png.\nDo you want to continue?", pya.MessageBox.Yes | pya.MessageBox.No)
+          if ans != pya.MessageBox.Yes:
+            print('stopped')
+            return
+
+      savePath = os.path.splitext(currentPath)[0] + ".png"
+      img = view.save_image_with_options(savePath,w,h,0,0,0,rect,True)
+      
+    finally:
+      #Restore properties
+      for l in view.each_layer():
+        print(backup[l.source])
+        l.fill_color = backup[l.source].fill_color
+        l.frame_color = backup[l.source].frame_color
+        l.dither_pattern = backup[l.source].dither_pattern
+      view.set_config('grid-visible',grid_visible)
+    return
+    # get the screenshot and place it in the image label
+
+  def __init__(self, parent = None):
+    """ Dialog constructor """
+    
+    super(ScreenshotDialog, self).__init__()
+    self.readCarac()
+    self.setWindowTitle("Export for SmartPrint")
+    
+    self.resize(400, 150)
+
+    layout = pya.QGridLayout(self)
+    self.setLayout(layout)
+
+    self.objCombo = pya.QComboBox(self)
+    for x in self.lenses:
+      self.objCombo.addItem(str(x["mag"]))
+    self.objCombo.setCurrentIndex(len(self.lenses)-1)
+    button = pya.QPushButton('Save', self)
+    button.setFont(pya.QFont('Times', 18, pya.QFont.Bold))
+    
+    l = pya.QLabel("Objectif", self)
+    layout.addWidget(l, 0,0,1,1)
+    self.centerCheck = pya.QCheckBox("Center",self)
+    self.centerCheck.setCheckState(pya.Qt_CheckState.Checked)
+    
+    self.warnCheck = pya.QCheckBox("Warn on overflow",self)
+    #self.warnCheck.setCheckState(pya.Qt_CheckState.Checked)
+    layout.addWidget(self.warnCheck, 2,1,1,-1)
+    layout.addWidget(self.objCombo, 0,1,1,-1)
+    layout.addWidget(self.centerCheck, 1,1,1,-1)
+    layout.addWidget(button, 3,0,1,-1)
+    
+    # attach the event handler
+    button.clicked(self.button_clicked)
+
+# Instantiate the dialog and make it visible initially.
+# Passing the main_window will make it stay on top of the main window.
+dialog = ScreenshotDialog(pya.Application.instance().main_window())
+dialog.show()
+</text>
+</klayout-macro>
