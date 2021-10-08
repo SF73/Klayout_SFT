@@ -46,6 +46,7 @@ class ScreenshotDialog(pya.QDialog):
     
     #Backup properties
     grid_visible = view.get_config('grid-visible')
+    view.set_config('grid-visible',"false")
     backup = {}
     for l in view.each_layer():
       backup[l.source] = l.dup()
@@ -67,7 +68,7 @@ class ScreenshotDialog(pya.QDialog):
       rect.move(-lens["width"]/2, -lens["height"]/2)
       if self.centerCheck.checked:
         p = cell.bbox().center()
-        rect.move(p.x*dbu, p.y*dbu)       
+        rect.move(p.x*dbu, p.y*dbu)   
       #img = view.get_image_with_options(1920,1080,0,0,0,rect,True)
       if self.warnCheck.checked:
         if lens["height"] &lt; cell.bbox().height()*dbu or lens["width"] &lt; cell.bbox().width()*dbu:
@@ -88,9 +89,10 @@ class ScreenshotDialog(pya.QDialog):
       #Restore properties
       for l in view.each_layer():
         print(backup[l.source])
-        l.fill_color = backup[l.source].fill_color
-        l.frame_color = backup[l.source].frame_color
-        l.dither_pattern = backup[l.source].dither_pattern
+        l.assign(backup[l.source])
+        #l.fill_color = backup[l.source].fill_color
+        #l.frame_color = backup[l.source].frame_color
+        #l.dither_pattern = backup[l.source].dither_pattern
       view.set_config('grid-visible',grid_visible)
     return
     # get the screenshot and place it in the image label
