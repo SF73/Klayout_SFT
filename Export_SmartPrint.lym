@@ -8,7 +8,7 @@
  <doc/>
  <autorun>false</autorun>
  <autorun-early>false</autorun-early>
- <shortcut/>
+ <shortcut>F6</shortcut>
  <show-in-menu>true</show-in-menu>
  <group-name/>
  <menu-path/>
