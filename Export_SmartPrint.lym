@@ -47,6 +47,7 @@ class ScreenshotDialog(pya.QDialog):
     #Backup properties
     grid_visible = view.get_config('grid-visible')
     view.set_config('grid-visible',"false")
+    view.max_hier()
     backup = {}
     for l in view.each_layer():
       backup[l.source] = l.dup()
@@ -76,7 +77,7 @@ class ScreenshotDialog(pya.QDialog):
           if ans != pya.MessageBox.Yes:
             print('stopped')
             return
-        elif rect.bbox().left &gt; cell.bbox().left*dbu or rect.bbox().right &lt; cell.bbox().right*dbu or rect.bbox().top &lt; cell.bbox().top*dbu or rect.bbox().bottom &gt; cell.bbox().bottom*dbu:
+        elif rect.left &gt; cell.bbox().left*dbu or rect.right &lt; cell.bbox().right*dbu or rect.top &lt; cell.bbox().top*dbu or rect.bottom &gt; cell.bbox().bottom*dbu:
           ans = pya.MessageBox.warning("Warning", "Part of the drawing is outside of the png.\nDo you want to continue?", pya.MessageBox.Yes | pya.MessageBox.No)
           if ans != pya.MessageBox.Yes:
             print('stopped')
