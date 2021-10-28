@@ -17,11 +17,11 @@
  <text>import pya
 import os
 import math
+import subprocess
+import sys
+
 class ScreenshotDialog(pya.QDialog):
-  """
-  This class implements a dialog with a screenshot display area and a
-  screenshot button
-  """
+
   def readCarac(self):
     path = os.path.abspath(os.path.expanduser("~/Documents/SFTconverter/carac.dat"))
     if not os.path.exists(path):
@@ -34,11 +34,8 @@ class ScreenshotDialog(pya.QDialog):
       ar = [float(x.replace(",",".")) for x in ar]
       self.lenses.append({"mag":ar[0], "width":ar[1]*1000, "height":ar[2]*1000, "res":ar[3]})
   
-  
-  
-  def button_clicked(self, checked):
+  def button_clicked(self):
     """ Event handler: "Screenshot" button clicked """
-
     view = pya.Application.instance().main_window().current_view()
     if view is None:
       pya.MessageBox.warning("No layout", "No layout", pya.MessageBox.Ok)
@@ -84,19 +81,21 @@ class ScreenshotDialog(pya.QDialog):
             return
 
       savePath = os.path.splitext(currentPath)[0] + ".png"
-      img = view.save_image_with_options(savePath,w,h,0,0,0,rect,True)
+      img = view.save_image_with_options(savePath,w,h,0,0,0,rect,False)
       
+      macro_folder = os.path.dirname(os.path.realpath(__file__))
+      ps_path = os.path.join(macro_folder, "mean_filter.ps1")
+      #ps_path = os.path.join(pya.Application.instance().application_data_path(), "pymacros", "mean_filter.ps1")
+      if os.path.exists(ps_path) and self.meanCheck.checked:
+        #sigma = self.sigmaInput.text
+        cmd = ["PowerShell","-NoProfile", "-WindowStyle","hidden", "-ExecutionPolicy", "Unrestricted", "-File", "mean_filter.ps1", savePath]
+        ec = subprocess.run(cmd, cwd=macro_folder)
     finally:
       #Restore properties
       for l in view.each_layer():
-        print(backup[l.source])
         l.assign(backup[l.source])
-        #l.fill_color = backup[l.source].fill_color
-        #l.frame_color = backup[l.source].frame_color
-        #l.dither_pattern = backup[l.source].dither_pattern
       view.set_config('grid-visible',grid_visible)
     return
-    # get the screenshot and place it in the image label
 
   def __init__(self, parent = None):
     """ Dialog constructor """
@@ -123,18 +122,20 @@ class ScreenshotDialog(pya.QDialog):
     self.centerCheck.setCheckState(pya.Qt_CheckState.Checked)
     
     self.warnCheck = pya.QCheckBox("Warn on overflow",self)
+    self.meanCheck = pya.QCheckBox("Mean filter",self)
     #self.warnCheck.setCheckState(pya.Qt_CheckState.Checked)
     layout.addWidget(self.warnCheck, 2,1,1,-1)
     layout.addWidget(self.objCombo, 0,1,1,-1)
     layout.addWidget(self.centerCheck, 1,1,1,-1)
-    layout.addWidget(button, 3,0,1,-1)
+    layout.addWidget(self.meanCheck, 3,1,1,-1)
+    layout.addWidget(button, 4,0,1,-1)
     
     # attach the event handler
     button.clicked(self.button_clicked)
 
 # Instantiate the dialog and make it visible initially.
 # Passing the main_window will make it stay on top of the main window.
+
 dialog = ScreenshotDialog(pya.Application.instance().main_window())
-dialog.show()
-</text>
+dialog.show()</text>
 </klayout-macro>
